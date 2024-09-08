@@ -1,0 +1,179 @@
+Let's break down the steps for this challenge lab "Implement Load Balancing on Compute Engine" and go through each task and field in detail:
+
+---
+
+### **Task 1: Create a Project Jumphost Instance**
+
+**Steps:**
+1. **Go to the Google Cloud Console**.
+   - Navigate to "Compute Engine" > "VM instances."
+   
+2. **Create a New Instance**:
+   - Click on **Create Instance**.
+   
+3. **Configure the Instance Fields**:
+   - **Name**: Set the instance name (e.g., `jumphost-instance`).
+   - **Region/Zone**: Set the zone to the one mentioned in the task (use the default region/zone if unspecified).
+   - **Machine type**: Select **e2-micro** (as mentioned in the task).
+   - **Boot disk**: Use the default Debian Linux image (no need to change anything here).
+
+4. **Firewall**: Allow **HTTP** and **HTTPS** traffic (check the boxes).
+
+5. **Create the instance**:
+   - Click **Create** and wait for the instance to spin up.
+
+6. **Check your progress**:
+   - Use the **Check my progress** button to verify if this step is completed.
+
+---
+
+### **Task 2: Set Up an HTTP Load Balancer**
+
+**Steps:**
+
+#### **Step 1: Create an Instance Template**
+
+1. **Navigate to "Instance Templates"**:
+   - Go to **Compute Engine** > **Instance templates**.
+   - Click on **Create instance template**.
+
+2. **Configure the Template Fields**:
+   - **Name**: Give a name to the instance template (e.g., `webserver-template`).
+   - **Machine type**: Set this to **e2-medium**.
+   - **Boot disk**: Use the default Debian Linux.
+   - **Startup script**: Under "Management, security, disks, networking, sole tenancy", find the **Automation** section and input the following startup script:
+
+```bash
+#! /bin/bash
+apt-get update
+apt-get install -y nginx
+service nginx start
+sed -i -- 's/nginx/Google Cloud Platform - '"$HOSTNAME"'/' /var/www/html/index.nginx-debian.html
+```
+
+3. **Firewall**: Allow **HTTP** and **HTTPS** traffic.
+   - Tick the box for both.
+
+4. **Create the template**: 
+   - Click **Create**.
+
+---
+
+#### **Step 2: Create a Managed Instance Group**
+
+1. **Navigate to Managed Instance Groups**:
+   - Go to **Compute Engine** > **Instance groups**.
+   - Click **Create instance group**.
+
+2. **Configure the Group Fields**:
+   - **Name**: Name the instance group (e.g., `webserver-group`).
+   - **Location**: Set it to the appropriate **zone** or **region**.
+   - **Instance template**: Select the instance template you just created (`webserver-template`).
+   - **Size**: Set the number of instances to **2**.
+
+3. **Auto-healing**: Enable auto-healing using the health check (which you will create next).
+
+4. **Create the instance group**:
+   - Click **Create**.
+
+---
+
+#### **Step 3: Create a Firewall Rule**
+
+1. **Navigate to "Firewall Rules"**:
+   - Go to **VPC network** > **Firewall**.
+   - Click **Create firewall rule**.
+
+2. **Configure the Firewall Rule Fields**:
+   - **Name**: Give it a name (e.g., `allow-http-rule`).
+   - **Targets**: Set this to **All instances in the network**.
+   - **Source IP ranges**: Set this to `0.0.0.0/0` (allows all IPs).
+   - **Protocols and ports**: Allow traffic on **tcp:80**.
+
+3. **Create the rule**:
+   - Click **Create**.
+
+---
+
+#### **Step 4: Create a Health Check**
+
+1. **Navigate to Health Checks**:
+   - Go to **Compute Engine** > **Health checks**.
+   - Click **Create health check**.
+
+2. **Configure the Health Check Fields**:
+   - **Name**: Give it a name (e.g., `webserver-health-check`).
+   - **Protocol**: Set this to **HTTP**.
+   - **Port**: Set it to **80**.
+
+3. **Create the health check**:
+   - Click **Create**.
+
+---
+
+#### **Step 5: Create a Backend Service**
+
+1. **Navigate to Backend Services**:
+   - Go to **Network services** > **Load balancing**.
+   - Click **Create load balancer** and select **HTTP(S) Load Balancing**.
+   - Select **Backend configuration**.
+
+2. **Configure the Backend Service Fields**:
+   - **Name**: Give it a name (e.g., `webserver-backend-service`).
+   - **Backends**: Add your managed instance group (`webserver-group`) to the backend service.
+   - **Named port**: Set this to **http:80**.
+   - **Health check**: Select the health check you just created (`webserver-health-check`).
+
+3. **Create the backend service**:
+   - Click **Create**.
+
+---
+
+#### **Step 6: Create a URL Map**
+
+1. **Navigate to URL Maps**:
+   - In the load balancer creation, move to **Host and path rules**.
+   - Click **Create URL map**.
+
+2. **Configure the URL Map Fields**:
+   - **Name**: Give it a name (e.g., `webserver-url-map`).
+   - **Default backend service**: Set this to your backend service (`webserver-backend-service`).
+
+3. **Create the URL map**:
+   - Click **Create**.
+
+---
+
+#### **Step 7: Create an HTTP Proxy**
+
+1. **Navigate to HTTP(S) Proxies**:
+   - In the load balancer creation, move to **Frontend configuration**.
+
+2. **Configure the HTTP Proxy Fields**:
+   - **Name**: Give it a name (e.g., `webserver-http-proxy`).
+   - **URL map**: Set this to your URL map (`webserver-url-map`).
+
+3. **Create the HTTP proxy**:
+   - Click **Create**.
+
+---
+
+#### **Step 8: Create a Forwarding Rule**
+
+1. **Navigate to Forwarding Rules**:
+   - In the final part of load balancer creation, set up the forwarding rule.
+
+2. **Configure the Forwarding Rule Fields**:
+   - **Name**: Give it a name (e.g., `webserver-forwarding-rule`).
+   - **IP version**: Set it to **IPv4**.
+   - **Protocol**: Set it to **HTTP**.
+   - **IP address**: Choose **Ephemeral**.
+   - **Port**: Set it to **80**.
+
+3. **Create the forwarding rule**:
+   - Click **Create**.
+
+---
+
+Once you've completed all these steps, wait a few minutes for the load balancer setup to propagate. Then, check your progress using the **Check my progress** button.
+
